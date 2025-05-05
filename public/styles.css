@@ -1,0 +1,63 @@
+/* Estilo del contenedor principal */
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    margin-left: 0px;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #b2ffd0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#gameContainer {
+    position: relative;
+    width: 1300px;
+    height: 560px;
+    margin: 40px auto; /* centrado horizontal con margen arriba */
+    background-color: #ffffff00; /* solo para que veas el contenedor */
+}
+
+/* Canvas con fondo de cuadrícula (mapa) */
+#gameCanvas {
+    width: 1000px;
+    height: calc(100% - 4px);
+    background-color: #e8f4f8;
+    background-image: 
+        linear-gradient(#ccc 1px, transparent 1px),
+        linear-gradient(90deg, #ccc 1px, transparent 1px);
+    background-size: 40px 40px; /* Tamaño de la cuadrícula */
+    border: 2px solid #000000;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    border-radius: 5px; 
+}
+
+#chatInput {
+    /* Mantén tus propiedades existentes (position, width, height, etc.) */
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 260px;
+    height: 560px; /* ¡Mantén tu altura original! */
+    padding: 0 10px; /* Padding lateral (sin padding vertical) */
+    border: 2px solid #000000;
+    border-radius: 5px;
+    font-size: 16px;
+    
+    /* Añade estas propiedades nuevas */
+    line-height: 380px; /* Ajusta este valor para mover el placeholder */
+    box-sizing: border-box; /* Evita que el padding afecte el tamaño total */
+}
+
+#chatInput::placeholder {
+    color: #888;
+    font-size: 16px;
+    vertical-align: top; /* Alinea el placeholder arriba */
+    line-height: normal; /* Reset para el placeholder */
+    position: relative;
+    left: 30px;
+    top: -180px; /* Ajusta este valor para moverlo hacia arriba */
+}
+

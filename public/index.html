@@ -15,10 +15,14 @@
             font-size: 16px;
         }
     </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <input type="text" id="chatInput" placeholder="Escribe y presiona Enter">
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="560"></canvas>
+        <input type="text" id="chatInput" placeholder="Escribe y presiona Enter">
+    </div>
     
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -93,21 +97,21 @@
 
         // Movimiento con teclado
         document.addEventListener('keydown', (e) => {
-            const speed = 10;
+            const speed = 20;
             const player = players[socket.id];
             if (!player) return;
 
             switch(e.key) {
-                case 'ArrowUp': player.y -= speed; break;
-                case 'ArrowDown': player.y += speed; break;
-                case 'ArrowLeft': player.x -= speed; break;
-                case 'ArrowRight': player.x += speed; break;
+                case 'w': player.y -= speed; break;
+                case 's': player.y += speed; break;
+                case 'a': player.x -= speed; break;
+                case 'd': player.x += speed; break;
                 default: return;
             }
 
             // Limitar al área del canvas
-            player.x = Math.max(10, Math.min(390, player.x));
-            player.y = Math.max(10, Math.min(390, player.y));
+            player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
+            player.y = Math.max(10, Math.min(canvas.height - 10, player.y));
 
             socket.emit('playerMove', { x: player.x, y: player.y });
             drawPlayers();
