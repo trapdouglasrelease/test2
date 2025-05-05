@@ -3,50 +3,68 @@
 <head>
     <title>Juego Multijugador</title>
     <style>
-        canvas { border: 1px solid black; }
+        body { font-family: Arial, sans-serif; }
+        canvas { 
+            border: 1px solid black;
+            display: block;
+            margin-bottom: 10px;
+        }
+        #chatInput {
+            padding: 8px;
+            width: 384px;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <input type="text" id="chatInput" placeholder="Escribe y presiona Enter">
     
-    <!-- Importar Socket.io (¡importante!) -->
     <script src="/socket.io/socket.io.js"></script>
-    
     <script>
-        // ----- CÓDIGO JAVASCRIPT -----
-        const socket = io();  // Conexión al servidor
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const players = {};  // Almacena todos los jugadores
+        const socket = io();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const chatInput = document.getElementById('chatInput');
+        let players = {};
 
-        // Dibuja todos los jugadores en el canvas
         function drawPlayers() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
             Object.values(players).forEach(player => {
+                // Dibujar jugador
                 ctx.fillStyle = player.color;
                 ctx.beginPath();
                 ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
                 ctx.fill();
-                // Mostrar ID del jugador (opcional)
-                ctx.fillStyle = "black";
-                ctx.font = "10px Arial";
-                ctx.fillText(player.id.slice(0, 5), player.x - 10, player.y - 12);
+
+                // Dibujar nombre
+                ctx.fillStyle = 'black';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(player.name, player.x, player.y - 15);
+
+                // Dibujar mensajes (máximo 2)
+                player.messages?.forEach((msg, index) => {
+                    ctx.fillStyle = '#333';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(msg.text, player.x, player.y - 30 - (index * 15));
+                });
             });
         }
 
-        // Eventos de Socket.io
-        socket.on("init", (data) => {
-            players[socket.id] = data.currentPlayer;  // Tu jugador
-            Object.assign(players, data.otherPlayers); // Jugadores existentes
+        // Eventos del servidor
+        socket.on('init', (data) => {
+            players = { ...data.otherPlayers, [socket.id]: data.currentPlayer };
             drawPlayers();
         });
 
-        socket.on("newPlayer", (newPlayer) => {
+        socket.on('newPlayer', (newPlayer) => {
             players[newPlayer.id] = newPlayer;
             drawPlayers();
         });
 
-        socket.on("playerMoved", (data) => {
+        socket.on('playerMoved', (data) => {
             if (players[data.id]) {
                 players[data.id].x = data.x;
                 players[data.id].y = data.y;
@@ -54,25 +72,53 @@
             }
         });
 
-        socket.on("playerDisconnected", (id) => {
+        socket.on('messageSent', (data) => {
+            if (players[data.id]) {
+                players[data.id].messages = data.messages;
+                drawPlayers();
+            }
+        });
+
+        socket.on('messageUpdate', (data) => {
+            if (players[data.id]) {
+                players[data.id].messages = data.messages;
+                drawPlayers();
+            }
+        });
+
+        socket.on('playerDisconnected', (id) => {
             delete players[id];
             drawPlayers();
         });
 
-        // Movimiento con teclado (solo para tu jugador)
-        document.addEventListener("keydown", (e) => {
+        // Movimiento con teclado
+        document.addEventListener('keydown', (e) => {
             const speed = 10;
             const player = players[socket.id];
             if (!player) return;
 
-            if (e.key === "ArrowUp") player.y -= speed;
-            if (e.key === "ArrowDown") player.y += speed;
-            if (e.key === "ArrowLeft") player.x -= speed;
-            if (e.key === "ArrowRight") player.x += speed;
+            switch(e.key) {
+                case 'ArrowUp': player.y -= speed; break;
+                case 'ArrowDown': player.y += speed; break;
+                case 'ArrowLeft': player.x -= speed; break;
+                case 'ArrowRight': player.x += speed; break;
+                default: return;
+            }
 
-            // Enviar movimiento al servidor
-            socket.emit("playerMove", { x: player.x, y: player.y });
-            drawPlayers();  // Actualizar localmente
+            // Limitar al área del canvas
+            player.x = Math.max(10, Math.min(390, player.x));
+            player.y = Math.max(10, Math.min(390, player.y));
+
+            socket.emit('playerMove', { x: player.x, y: player.y });
+            drawPlayers();
+        });
+
+        // Enviar mensaje
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+                socket.emit('sendMessage', chatInput.value.trim());
+                chatInput.value = '';
+            }
         });
     </script>
 </body>
