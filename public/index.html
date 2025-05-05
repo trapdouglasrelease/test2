@@ -21,7 +21,12 @@
 
     <div id="gameContainer">
         <canvas id="gameCanvas" width="1000" height="560"></canvas>
-        <input type="text" id="chatInput" placeholder="Escribe y presiona Enter">
+        
+        <!-- Chat: Añadí un contenedor extra para mejor control -->
+        <div id="chatBox">
+            <div id="chatHistory"></div>
+            <input type="text" id="chatInput" placeholder="Chatea con nosotros...">
+        </div>
     </div>
     
     <script src="/socket.io/socket.io.js"></script>
