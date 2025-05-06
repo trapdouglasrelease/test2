@@ -129,6 +129,16 @@
                 chatInput.value = '';
             }
         });
+
+        socket.on('updateChatHistory', (messages) => {
+        const chatHistoryDiv = document.getElementById('chatHistory');
+        // Mantener orden cronológico: nuevos mensajes ABAJO
+        chatHistoryDiv.innerHTML = messages.map(msg => 
+        `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
+        ).join('');
+
+        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // 👈 ¡Esto es clave!
+        });
     </script>
 </body>
 </html>

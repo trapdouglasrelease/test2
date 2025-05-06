@@ -80,3 +80,14 @@ body {
     top: 0px; /* Ajusta este valor para moverlo hacia arriba */
 }
 
+#chatHistory {
+    display: flex;
+    flex-direction: column-reverse; /* 👈 Mensajes nuevos quedan abajo */
+    overflow-y: auto;
+    max-height: 500px; /* Ajusta según tu diseño */
+    padding: 10px;
+}
+#chatHistory div {
+    margin-bottom: 8px;
+    word-break: break-word; /* Para mensajes largos */
+}

@@ -8,6 +8,7 @@ const io = socketIO(server);
 
 app.use(express.static('public'));
 
+const chatHistory = []; // Historial global de mensajes
 const players = {};
 let playerCount = 0;
 
@@ -51,21 +52,28 @@ io.on('connection', (socket) => {
 
     socket.on('sendMessage', (message) => {
         if (players[socket.id] && message.trim() !== '') {
-            players[socket.id].messages.unshift({ // Usamos unshift para agregar al inicio
+            const msgData = {
+                id: socket.id,
                 text: message,
+                playerName: players[socket.id].name,
                 timestamp: Date.now()
-            });
-
-            // Limitar a 2 mensajes máximo
+            };
+    
+            // 1. Mensaje flotante (como antes)
+            players[socket.id].messages.unshift({ text: message, timestamp: Date.now() });
             if (players[socket.id].messages.length > 2) {
                 players[socket.id].messages.pop();
             }
-
             io.emit('messageSent', {
                 id: socket.id,
                 messages: players[socket.id].messages
             });
-
+    
+            // 2. Historial del chat (nuevo)
+            chatHistory.push(msgData);
+            if (chatHistory.length > 100) chatHistory.shift(); // Límite de 100 mensajes
+            io.emit('updateChatHistory', chatHistory.slice(-20)); // Envía los últimos 20
+    
             setTimeout(() => {
                 players[socket.id].messages = players[socket.id].messages.filter(
                     m => Date.now() - m.timestamp < 10000
