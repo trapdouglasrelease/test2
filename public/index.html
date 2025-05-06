@@ -122,22 +122,48 @@
             drawPlayers();
         });
 
-        // Enviar mensaje
+        // --- AGREGA ESTO (nuevo control del chat) ---
+        let isChatOpen = false;
+
+        // 1. Abrir chat con Enter (global)
+        document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !isChatOpen) {
+        e.preventDefault();
+        chatInput.focus();
+        isChatOpen = true;
+        }
+        });
+
+        // 2. Enviar o Cerrar chat (input abierto)
         chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && chatInput.value.trim() !== '') {
-                socket.emit('sendMessage', chatInput.value.trim());
-                chatInput.value = '';
-            }
+        if (e.key === 'Enter') {
+        if (chatInput.value.trim() !== '') {
+            socket.emit('sendMessage', chatInput.value.trim());
+            chatInput.value = '';
+        } else {
+            e.preventDefault();
+            chatInput.blur();
+            isChatOpen = false;
+        }
+        }
+        });
+
+        // 3. Cerrar al hacer clic fuera
+        document.addEventListener('click', (e) => {
+        if (e.target !== chatInput && isChatOpen) {
+        chatInput.blur();
+        isChatOpen = false;
+        }
         });
 
         socket.on('updateChatHistory', (messages) => {
-        const chatHistoryDiv = document.getElementById('chatHistory');
-        // Mantener orden cronológico: nuevos mensajes ABAJO
-        chatHistoryDiv.innerHTML = messages.map(msg => 
-        `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
-        ).join('');
+            const chatHistoryDiv = document.getElementById('chatHistory');
+            // Mantener orden cronológico: nuevos mensajes ABAJO
+            chatHistoryDiv.innerHTML = messages.map(msg => 
+                `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
+            ).reverse('').join(''); // ← Sin .reverse() ni orden inverso
 
-        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // 👈 ¡Esto es clave!
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // 👈 ¡Esto es clave!
         });
     </script>
 </body>
