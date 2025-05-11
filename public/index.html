@@ -1,170 +1,243 @@
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Juego Multijugador</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        canvas { 
-            border: 1px solid black;
-            display: block;
-            margin-bottom: 10px;
-        }
-        #chatInput {
-            padding: 8px;
-            width: 384px;
-            font-size: 16px;
-        }
+      body {
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        border: 1px solid black;
+        display: block;
+        margin-bottom: 10px;
+      }
+      #chatInput {
+        padding: 8px;
+        width: 384px;
+        font-size: 16px;
+      }
     </style>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="1000" height="560"></canvas>
-        
-        <!-- Chat: Añadí un contenedor extra para mejor control -->
-        <div id="chatBox">
-            <div id="chatHistory"></div>
-            <input type="text" id="chatInput" placeholder="Chatea con nosotros...">
-        </div>
+      <canvas id="gameCanvas" width="1000" height="560"></canvas>
+
+      <!-- Chat: Añadí un contenedor extra para mejor control -->
+      <div id="chatBox">
+        <div id="chatHistory"></div>
+        <input
+          type="text"
+          id="chatInput"
+          placeholder="Chatea con nosotros..."
+        />
+      </div>
     </div>
-    
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const chatInput = document.getElementById('chatInput');
-        let players = {};
+      const socket = io();
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const chatInput = document.getElementById("chatInput");
+      let players = {};
 
-        function drawPlayers() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            Object.values(players).forEach(player => {
-                // Dibujar jugador
-                ctx.fillStyle = player.color;
-                ctx.beginPath();
-                ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
-                ctx.fill();
+      function drawPlayers() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Dibujar nombre
-                ctx.fillStyle = 'black';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(player.name, player.x, player.y - 15);
+        Object.values(players).forEach((player) => {
+          // Dibujar jugador
+          ctx.fillStyle = player.color;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
+          ctx.fill();
 
-                // Dibujar mensajes (máximo 2)
-                player.messages?.forEach((msg, index) => {
-                    ctx.fillStyle = '#333';
-                    ctx.font = '10px Arial';
-                    ctx.fillText(msg.text, player.x, player.y - 30 - (index * 15));
-                });
+          // Dibujar nombre
+          ctx.fillStyle = "black";
+          ctx.font = "12px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(player.name, player.x, player.y - 15);
+
+          // Dibujar mensajes (máximo 2)
+          if (player.messages && player.messages.length > 0) {
+            const messageTexts = [...player.messages]
+              .reverse()
+              .map((msg) => msg.text);
+            const combinedText = messageTexts.join("\n");
+
+            ctx.font = "10px Arial";
+            ctx.textAlign = "center";
+
+            const lineHeight = 14;
+            const lines = combinedText.split("\n");
+            const longestLine = lines.reduce(
+              (a, b) => (a.length > b.length ? a : b),
+              ""
+            );
+            const textWidth = ctx.measureText("💬 " + longestLine).width;
+
+            const padding = 6;
+            const boxWidth = textWidth + padding * 2;
+            const boxHeight = lineHeight * lines.length + padding * 2;
+            const x = player.x - boxWidth / 2;
+            const y = player.y - boxHeight - 25;
+
+            // Dibuja la burbuja cwon pico
+            ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.strokeStyle = "#888";
+            ctx.lineWidth = 1.5;
+            const radius = 10;
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + boxWidth - radius, y);
+            ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + radius);
+            ctx.lineTo(x + boxWidth, y + boxHeight - radius);
+            ctx.quadraticCurveTo(
+              x + boxWidth,
+              y + boxHeight,
+              x + boxWidth - radius,
+              y + boxHeight
+            );
+            ctx.lineTo(x + boxWidth / 2 + 6, y + boxHeight);
+            ctx.lineTo(player.x + 5, player.y - 15); // Pico abajo
+            ctx.lineTo(x + boxWidth / 2 - 6, y + boxHeight);
+            ctx.lineTo(x + radius, y + boxHeight);
+            ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Dibuja los mensajes dentro
+            ctx.fillStyle = "#000";
+            lines.forEach((line, i) => {
+              ctx.fillText(
+                "" + line,
+                player.x,
+                y + padding + (i + 1) * lineHeight - 4
+              );
             });
+          }
+        });
+      }
+
+      // Eventos del servidor
+      socket.on("init", (data) => {
+        players = { ...data.otherPlayers, [socket.id]: data.currentPlayer };
+        drawPlayers();
+      });
+
+      socket.on("newPlayer", (newPlayer) => {
+        players[newPlayer.id] = newPlayer;
+        drawPlayers();
+      });
+
+      socket.on("playerMoved", (data) => {
+        if (players[data.id]) {
+          players[data.id].x = data.x;
+          players[data.id].y = data.y;
+          drawPlayers();
+        }
+      });
+
+      socket.on("messageSent", (data) => {
+        if (players[data.id]) {
+          players[data.id].messages = data.messages;
+          drawPlayers();
+        }
+      });
+
+      socket.on("messageUpdate", (data) => {
+        if (players[data.id]) {
+          players[data.id].messages = data.messages;
+          drawPlayers();
+        }
+      });
+
+      socket.on("playerDisconnected", (id) => {
+        delete players[id];
+        drawPlayers();
+      });
+
+      // Movimiento con teclado
+      document.addEventListener("keydown", (e) => {
+        const speed = 20;
+        const player = players[socket.id];
+        if (!player) return;
+
+        switch (e.key) {
+          case "w":
+            player.y -= speed;
+            break;
+          case "s":
+            player.y += speed;
+            break;
+          case "a":
+            player.x -= speed;
+            break;
+          case "d":
+            player.x += speed;
+            break;
+          default:
+            return;
         }
 
-        // Eventos del servidor
-        socket.on('init', (data) => {
-            players = { ...data.otherPlayers, [socket.id]: data.currentPlayer };
-            drawPlayers();
-        });
+        // Limitar al área del canvas
+        player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
+        player.y = Math.max(10, Math.min(canvas.height - 10, player.y));
 
-        socket.on('newPlayer', (newPlayer) => {
-            players[newPlayer.id] = newPlayer;
-            drawPlayers();
-        });
+        socket.emit("playerMove", { x: player.x, y: player.y });
+        drawPlayers();
+      });
 
-        socket.on('playerMoved', (data) => {
-            if (players[data.id]) {
-                players[data.id].x = data.x;
-                players[data.id].y = data.y;
-                drawPlayers();
-            }
-        });
+      // --- AGREGA ESTO (nuevo control del chat) ---
+      let isChatOpen = false;
 
-        socket.on('messageSent', (data) => {
-            if (players[data.id]) {
-                players[data.id].messages = data.messages;
-                drawPlayers();
-            }
-        });
-
-        socket.on('messageUpdate', (data) => {
-            if (players[data.id]) {
-                players[data.id].messages = data.messages;
-                drawPlayers();
-            }
-        });
-
-        socket.on('playerDisconnected', (id) => {
-            delete players[id];
-            drawPlayers();
-        });
-
-        // Movimiento con teclado
-        document.addEventListener('keydown', (e) => {
-            const speed = 20;
-            const player = players[socket.id];
-            if (!player) return;
-
-            switch(e.key) {
-                case 'w': player.y -= speed; break;
-                case 's': player.y += speed; break;
-                case 'a': player.x -= speed; break;
-                case 'd': player.x += speed; break;
-                default: return;
-            }
-
-            // Limitar al área del canvas
-            player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
-            player.y = Math.max(10, Math.min(canvas.height - 10, player.y));
-
-            socket.emit('playerMove', { x: player.x, y: player.y });
-            drawPlayers();
-        });
-
-        // --- AGREGA ESTO (nuevo control del chat) ---
-        let isChatOpen = false;
-
-        // 1. Abrir chat con Enter (global)
-        document.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !isChatOpen) {
-        e.preventDefault();
-        chatInput.focus();
-        isChatOpen = true;
+      // 1. Abrir chat con Enter (global)
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !isChatOpen) {
+          e.preventDefault();
+          chatInput.focus();
+          isChatOpen = true;
         }
-        });
+      });
 
-        // 2. Enviar o Cerrar chat (input abierto)
-        chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-        if (chatInput.value.trim() !== '') {
-            socket.emit('sendMessage', chatInput.value.trim());
-            chatInput.value = '';
-        } else {
-            e.preventDefault();
-            chatInput.blur();
-            isChatOpen = false;
+      // 2. Enviar o Cerrar chat (input abierto)
+      chatInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          if (chatInput.value.trim() !== "") {
+            socket.emit("sendMessage", chatInput.value.trim());
+            chatInput.value = "";
+          }
+          // Siempre se quita el foco (Con o sin texto)
+          e.preventDefault();
+          chatInput.blur();
+          isChatOpen = false;
         }
-        }
-        });
+      });
 
-        // 3. Cerrar al hacer clic fuera
-        document.addEventListener('click', (e) => {
+      // 3. Cerrar al hacer clic fuera
+      document.addEventListener("click", (e) => {
         if (e.target !== chatInput && isChatOpen) {
-        chatInput.blur();
-        isChatOpen = false;
+          chatInput.blur();
+          isChatOpen = false;
         }
-        });
+      });
 
-        socket.on('updateChatHistory', (messages) => {
-            const chatHistoryDiv = document.getElementById('chatHistory');
-            // Mantener orden cronológico: nuevos mensajes ABAJO
-            chatHistoryDiv.innerHTML = messages.map(msg => 
-                `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
-            ).reverse('').join(''); // ← Sin .reverse() ni orden inverso
+      socket.on("updateChatHistory", (messages) => {
+        const chatHistoryDiv = document.getElementById("chatHistory");
+        // Mantener orden cronológico: nuevos mensajes ABAJO
+        chatHistoryDiv.innerHTML = messages
+          .map(
+            (msg) =>
+              `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
+          )
+          .reverse("")
+          .join(""); // ← Sin .reverse() ni orden inverso
 
-            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // 👈 ¡Esto es clave!
-        });
+        chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // 👈 ¡Esto es clave!
+      });
     </script>
-</body>
+  </body>
 </html>
