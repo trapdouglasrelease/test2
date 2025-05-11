@@ -78,13 +78,16 @@ io.on("connection", (socket) => {
       io.emit("updateChatHistory", chatHistory.slice(-20)); // Envía los últimos 20
 
       setTimeout(() => {
-        players[socket.id].messages = players[socket.id].messages.filter(
-          (m) => Date.now() - m.timestamp < 10000
-        );
-        io.emit("messageUpdate", {
-          id: socket.id,
-          messages: players[socket.id].messages,
-        });
+        if (players[socket.id]) {
+          // ← Verifica que el jugador aún esté conectado
+          players[socket.id].messages = players[socket.id].messages.filter(
+            (m) => Date.now() - m.timestamp < 10000
+          );
+          io.emit("messageUpdate", {
+            id: socket.id,
+            messages: players[socket.id].messages,
+          });
+        }
       }, 10000);
     }
   });

@@ -65,7 +65,7 @@
               .map((msg) => msg.text);
             const combinedText = messageTexts.join("\n");
 
-            ctx.font = "10px Arial";
+            ctx.font = "15px Arial";
             ctx.textAlign = "center";
 
             const lineHeight = 14;
@@ -76,11 +76,11 @@
             );
             const textWidth = ctx.measureText("" + longestLine).width;
 
-            const padding = 6;
+            const padding = 8;
             const boxWidth = textWidth + padding * 2;
-            const boxHeight = lineHeight * lines.length + padding * 2;
+            const boxHeight = lineHeight * lines.length + padding * 1.5;
             const x = player.x - boxWidth / 2;
-            const y = player.y - boxHeight - 25;
+            const y = player.y - boxHeight - 35;
 
             // Dibuja la burbuja con pico
             ctx.fillStyle = "rgba(0, 0, 0, 0.50)";
@@ -99,7 +99,7 @@
               y + boxHeight
             );
             ctx.lineTo(x + boxWidth / 2 + 6, y + boxHeight);
-            ctx.lineTo(player.x, player.y - 15); // Pico abajo
+            ctx.lineTo(player.x, player.y - 25); // Pico abajo
             ctx.lineTo(x + boxWidth / 2 - 6, y + boxHeight);
             ctx.lineTo(x + radius, y + boxHeight);
             ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
