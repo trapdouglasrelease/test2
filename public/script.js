@@ -239,16 +239,34 @@ function updatePlayerMovement() {
   // Dirección desde el centro del canvas al mouse
   const dx = mouseX - canvas.width / 2;
   const dy = mouseY - canvas.height / 2;
-  const angle = Math.atan2(dy, dx);
-  player.angle = angle;
+  const targetAngle = Math.atan2(dy, dx);
 
-  const speed = 3; // Ajusta la velocidad aquí
-  player.x += Math.cos(angle) * speed;
-  player.y += Math.sin(angle) * speed;
+  // Inicializar ángulo si no existe
+  if (player.angle === undefined) player.angle = targetAngle;
+
+  // Limitar la rotación (giro constante por frame)
+  const maxTurnSpeed = 0.03; // Radianes por frame (ajustá esto para más o menos velocidad)
+  let angleDiff = targetAngle - player.angle;
+
+  // Normalizar entre -PI y PI
+  angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+
+  // Aplicar rotación limitada
+  if (Math.abs(angleDiff) <= maxTurnSpeed) {
+    player.angle = targetAngle;
+  } else {
+    player.angle += Math.sign(angleDiff) * maxTurnSpeed;
+  }
+
+  // Mover el jugador hacia adelante según su ángulo actual
+  const speed = 3;
+  player.x += Math.cos(player.angle) * speed;
+  player.y += Math.sin(player.angle) * speed;
 
   // Limitar dentro del mapa circular
-  const distFromCenter = Math.sqrt(
-    Math.pow(player.x - MAP_RADIUS, 2) + Math.pow(player.y - MAP_RADIUS, 2)
+  const distFromCenter = Math.hypot(
+    player.x - MAP_RADIUS,
+    player.y - MAP_RADIUS
   );
   if (distFromCenter > MAP_RADIUS - 10) {
     const angleToCenter = Math.atan2(
@@ -263,7 +281,7 @@ function updatePlayerMovement() {
   socket.emit("playerMove", {
     x: player.x,
     y: player.y,
-    angle: angle,
+    angle: player.angle,
   });
 }
 
