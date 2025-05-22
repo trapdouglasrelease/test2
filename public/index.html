@@ -198,6 +198,10 @@
         }
       });
 
+      chatInput.addEventListener("focus", () => {
+        isChatOpen = true;
+      });
+
       chatInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
           if (chatInput.value.trim() !== "") {
@@ -220,11 +224,12 @@
       socket.on("updateChatHistory", (messages) => {
         const chatHistoryDiv = document.getElementById("chatHistory");
         chatHistoryDiv.innerHTML = messages
+          .slice() // copiar array para no mutarlo
+          .reverse()
           .map(
             (msg) =>
               `<div><strong>${msg.playerName}:</strong> ${msg.text}</div>`
           )
-          .reverse("")
           .join("");
         chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
       });
