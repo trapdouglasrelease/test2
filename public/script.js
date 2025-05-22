@@ -5,6 +5,7 @@ const ctx = canvas.getContext("2d");
 const chatInput = document.getElementById("chatInput");
 let players = {};
 let isChatOpen = false;
+let isRunning = false;
 
 const headImage = new Image();
 headImage.src = "assets/worm-head.png";
@@ -38,6 +39,31 @@ canvas.addEventListener("mousemove", (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 });
+
+canvas.addEventListener("mousedown", (e) => {
+  if ([0, 1, 2].includes(e.button)) {
+    isRunning = true;
+  }
+});
+canvas.addEventListener("mouseup", () => {
+  isRunning = false;
+});
+canvas.addEventListener("contextmenu", (e) => e.preventDefault()); // Evita el menú del click derecho
+
+// 🎹 Teclas: espacio, flecha arriba, Q
+document.addEventListener("keydown", (e) => {
+  if ([" ", "ArrowUp", "q", "Q"].includes(e.key)) {
+    isRunning = true;
+  }
+});
+document.addEventListener("keyup", (e) => {
+  if ([" ", "ArrowUp", "q", "Q"].includes(e.key)) {
+    isRunning = false;
+  }
+});
+
+// Opcional: evitar menú contextual del click derecho en el canvas
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 // Ajustar tamaño del canvas al cargar y redimensionar
 function resizeCanvas() {
@@ -170,10 +196,10 @@ function drawPlayers() {
     }
 
     // Nombre del jugador
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "green";
     ctx.font = "12px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(p.name, screenX, screenY - 15);
+    ctx.fillText(p.name, screenX, screenY - -70);
 
     // Mensajes flotantes
     if (p.messages && p.messages.length > 0) {
@@ -195,10 +221,10 @@ function drawPlayers() {
       const boxWidth = textWidth + padding * 2;
       const boxHeight = lineHeight * lines.length + padding * 1.5;
       const x = screenX - boxWidth / 2;
-      const y = screenY - boxHeight - 35;
+      const y = screenY - boxHeight - 75;
 
-      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-      ctx.strokeStyle = "rgba(0, 0, 0, 0)";
+      ctx.fillStyle = "rgb(255, 255, 255)";
+      ctx.strokeStyle = "rgb(0, 0, 0)";
       ctx.lineWidth = 0;
       const radius = 4;
 
@@ -214,7 +240,7 @@ function drawPlayers() {
         y + boxHeight
       );
       ctx.lineTo(x + boxWidth / 2 + 6, y + boxHeight);
-      ctx.lineTo(screenX, screenY - 25);
+      ctx.lineTo(screenX, screenY - 65);
       ctx.lineTo(x + boxWidth / 2 - 6, y + boxHeight);
       ctx.lineTo(x + radius, y + boxHeight);
       ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - radius);
@@ -236,34 +262,31 @@ function updatePlayerMovement() {
   const player = players[socket.id];
   if (!player) return;
 
-  // Dirección desde el centro del canvas al mouse
   const dx = mouseX - canvas.width / 2;
   const dy = mouseY - canvas.height / 2;
   const targetAngle = Math.atan2(dy, dx);
 
-  // Inicializar ángulo si no existe
   if (player.angle === undefined) player.angle = targetAngle;
 
-  // Limitar la rotación (giro constante por frame)
-  const maxTurnSpeed = 0.03; // Radianes por frame (ajustá esto para más o menos velocidad)
-  let angleDiff = targetAngle - player.angle;
+  const baseSpeed = 3;
+  const runSpeed = 6;
+  const speed = isRunning ? runSpeed : baseSpeed;
 
-  // Normalizar entre -PI y PI
+  const baseTurnSpeed = 0.03;
+  const maxTurnSpeed = baseTurnSpeed * (speed / baseSpeed);
+
+  let angleDiff = targetAngle - player.angle;
   angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
 
-  // Aplicar rotación limitada
   if (Math.abs(angleDiff) <= maxTurnSpeed) {
     player.angle = targetAngle;
   } else {
     player.angle += Math.sign(angleDiff) * maxTurnSpeed;
   }
 
-  // Mover el jugador hacia adelante según su ángulo actual
-  const speed = 3;
   player.x += Math.cos(player.angle) * speed;
   player.y += Math.sin(player.angle) * speed;
 
-  // Limitar dentro del mapa circular
   const distFromCenter = Math.hypot(
     player.x - MAP_RADIUS,
     player.y - MAP_RADIUS
@@ -277,7 +300,6 @@ function updatePlayerMovement() {
     player.y = MAP_RADIUS + Math.sin(angleToCenter) * (MAP_RADIUS - 10);
   }
 
-  // Enviar posición al servidor
   socket.emit("playerMove", {
     x: player.x,
     y: player.y,
