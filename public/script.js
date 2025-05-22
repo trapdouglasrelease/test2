@@ -9,6 +9,9 @@ let isChatOpen = false;
 const headImage = new Image();
 headImage.src = "assets/worm-head.png";
 
+const mapTexture = new Image();
+mapTexture.src = "assets/map-texture.png";
+
 //const defaultBodyImage1 = new Image();
 //defaultBodyImage1.src = "assets/worm-body1.png";
 
@@ -59,12 +62,85 @@ function drawPlayers() {
   ctx.fillStyle = "#182914"; // Verde suave tipo hoja
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const centerX = MAP_RADIUS - cameraX;
-  const centerY = MAP_RADIUS - cameraY;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, MAP_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = "#e8f4f8"; // color del mapa (claro)
-  ctx.fill();
+  if (mapTexture.complete) {
+    // === 1. Dibuja la textura con escala ===
+    ctx.save();
+
+    ctx.translate(-cameraX, -cameraY);
+
+    const scaleX = 0.4;
+    const scaleY = 0.45;
+    ctx.scale(scaleX, scaleY);
+
+    const pattern = ctx.createPattern(mapTexture, "repeat");
+    ctx.fillStyle = pattern;
+
+    ctx.beginPath();
+    ctx.ellipse(
+      MAP_RADIUS / scaleX,
+      MAP_RADIUS / scaleY,
+      MAP_RADIUS / scaleX,
+      MAP_RADIUS / scaleY,
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore(); // 🔚 Termina el dibujo de la textura
+
+    // === 2. Ahora sí: dibuja el borde rojo encima ===
+    ctx.save();
+
+    const borderCenterX = MAP_RADIUS - cameraX;
+    const borderCenterY = MAP_RADIUS - cameraY;
+
+    const borderWidth = 15;
+    const innerRadius = MAP_RADIUS - borderWidth / 2;
+    const outerRadius = MAP_RADIUS + borderWidth / 2;
+
+    const gradient = ctx.createRadialGradient(
+      borderCenterX,
+      borderCenterY,
+      innerRadius,
+      borderCenterX,
+      borderCenterY,
+      outerRadius
+    );
+
+    gradient.addColorStop(0, "rgba(255, 0, 0, 0)");
+    gradient.addColorStop(0.3, "rgba(255, 0, 0, 0.8)");
+    gradient.addColorStop(0.5, "rgba(255, 0, 0, 1)");
+    gradient.addColorStop(0.7, "rgba(255, 0, 0, 0.8)");
+    gradient.addColorStop(1, "rgba(255, 0, 0, 0)");
+
+    ctx.fillStyle = gradient;
+
+    ctx.beginPath();
+    ctx.ellipse(
+      borderCenterX,
+      borderCenterY,
+      outerRadius,
+      outerRadius,
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.ellipse(
+      borderCenterX,
+      borderCenterY,
+      innerRadius,
+      innerRadius,
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.closePath();
+    ctx.fill("evenodd");
+
+    ctx.restore(); // 🔚 Termina el borde rojo
+  }
 
   // Dibujar puntitos decorativos
   ctx.fillStyle = "#aaa";
@@ -76,12 +152,13 @@ function drawPlayers() {
     ctx.fill();
   });
 
+  // Dibujar jugadores y mensajes
   Object.values(players).forEach((p) => {
     const screenX = p.x - cameraX;
     const screenY = p.y - cameraY;
 
     if (headImage.complete && headImage.naturalWidth) {
-      const scale = 0.5; // Ajustá esto si querés agrandar o achicar
+      const scale = 1;
       const width = headImage.naturalWidth * scale;
       const height = headImage.naturalHeight * scale;
 
@@ -92,7 +169,7 @@ function drawPlayers() {
       ctx.restore();
     }
 
-    // Nombre
+    // Nombre del jugador
     ctx.fillStyle = "black";
     ctx.font = "12px Arial";
     ctx.textAlign = "center";
@@ -112,7 +189,7 @@ function drawPlayers() {
         (a, b) => (a.length > b.length ? a : b),
         ""
       );
-      const textWidth = ctx.measureText("" + longestLine).width;
+      const textWidth = ctx.measureText(longestLine).width;
 
       const padding = 8;
       const boxWidth = textWidth + padding * 2;
@@ -120,8 +197,8 @@ function drawPlayers() {
       const x = screenX - boxWidth / 2;
       const y = screenY - boxHeight - 35;
 
-      ctx.fillStyle = "rgba(0, 0, 0, 0.50)";
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.00)";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      ctx.strokeStyle = "rgba(0, 0, 0, 0)";
       ctx.lineWidth = 0;
       const radius = 4;
 
@@ -149,11 +226,7 @@ function drawPlayers() {
 
       ctx.fillStyle = "#000";
       lines.forEach((line, i) => {
-        ctx.fillText(
-          "" + line,
-          screenX,
-          y + padding + (i + 1) * lineHeight - 4
-        );
+        ctx.fillText(line, screenX, y + padding + (i + 1) * lineHeight - 4);
       });
     }
   });
