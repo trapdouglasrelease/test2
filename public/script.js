@@ -81,7 +81,7 @@ function drawPlayers() {
     const screenY = p.y - cameraY;
 
     if (headImage.complete && headImage.naturalWidth) {
-      const scale = 0.25; // Ajustá esto si querés agrandar o achicar
+      const scale = 0.5; // Ajustá esto si querés agrandar o achicar
       const width = headImage.naturalWidth * scale;
       const height = headImage.naturalHeight * scale;
 
