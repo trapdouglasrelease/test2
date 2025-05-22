@@ -1,3 +1,4 @@
+const MAP_RADIUS = 2000;
 const express = require("express");
 const socketIO = require("socket.io");
 const http = require("http");
@@ -76,6 +77,10 @@ io.on("connection", (socket) => {
       chatHistory.push(msgData);
       if (chatHistory.length > 19) chatHistory.shift(); // Límite de 19 mensajes
       io.emit("updateChatHistory", chatHistory.slice(-20)); // Envía los últimos 20
+
+      function gameLoop() {
+        requestAnimationFrame(gameLoop); // Sigue el bucle
+      }
 
       setTimeout(() => {
         if (players[socket.id]) {
