@@ -181,64 +181,29 @@ function drawPlayers() {
     ctx.fill();
   });
 
-  const tailLength = 50; // la cantidad de segmentos que querés mostrar
-  const spacing = 35; // la distancia entre segmentos
-
-  Object.values(players).forEach((p) => {
-    if (!p.tail || p.tail.length !== tailLength) {
-      p.tail = Array(tailLength)
-        .fill(null)
-        .map(() => ({ x: p.x, y: p.y }));
-    }
-
-    p.tail[0] = { x: p.x, y: p.y };
-
-    for (let i = 1; i < tailLength; i++) {
-      const prev = p.tail[i - 1];
-      const curr = p.tail[i];
-      const dx = prev.x - curr.x;
-      const dy = prev.y - curr.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist > spacing) {
-        const angle = Math.atan2(dy, dx);
-        curr.x = prev.x - Math.cos(angle) * spacing;
-        curr.y = prev.y - Math.sin(angle) * spacing;
-      }
-    }
-  });
-
   // Dibujar jugadores y mensajes
   Object.values(players).forEach((p) => {
     const screenX = p.x - cameraX;
     const screenY = p.y - cameraY;
 
-    // 🐍 Dibuja la cola del jugador con imagen
     if (Array.isArray(p.tail)) {
-      for (let i = p.tail.length - 1; i >= 1; i--) {
+      ctx.strokeStyle = "rgba(255, 255, 0, 0.8)"; // Color amarillo translúcido
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+
+      for (let i = 0; i < p.tail.length; i++) {
         const segment = p.tail[i];
         const segX = segment.x - cameraX;
         const segY = segment.y - cameraY;
 
-        if (bodyImage.complete && bodyImage.naturalWidth) {
-          const scale = 1;
-          const width = bodyImage.naturalWidth * scale;
-          const height = bodyImage.naturalHeight * scale;
-
-          ctx.save();
-          ctx.translate(segX, segY);
-
-          // Opcional: rotación suave del cuerpo en dirección a siguiente segmento
-          if (i > 0) {
-            const next = p.tail[i - 1];
-            const angle = Math.atan2(next.y - segment.y, next.x - segment.x);
-            ctx.rotate(angle);
-          }
-
-          ctx.drawImage(bodyImage, -width / 2, -height / 2, width, height);
-          ctx.restore();
+        if (i === 0) {
+          ctx.moveTo(segX, segY);
+        } else {
+          ctx.lineTo(segX, segY);
         }
       }
+
+      ctx.stroke();
     }
 
     if (headImage.complete && headImage.naturalWidth) {
@@ -350,28 +315,6 @@ function updatePlayerMovement() {
   player.x += Math.cos(player.angle) * speed;
   player.y += Math.sin(player.angle) * speed;
 
-  // Actualizar la cola
-  const spacing = 35; // distancia entre segmentos
-  const tail = player.tail;
-
-  if (Array.isArray(tail)) {
-    tail[0] = { x: player.x, y: player.y };
-
-    for (let i = 1; i < tail.length; i++) {
-      const prev = tail[i - 1];
-      const curr = tail[i];
-      const dx = prev.x - curr.x;
-      const dy = prev.y - curr.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist > spacing) {
-        const angle = Math.atan2(dy, dx);
-        curr.x = prev.x - Math.cos(angle) * spacing;
-        curr.y = prev.y - Math.sin(angle) * spacing;
-      }
-    }
-  }
-
   // Limitar dentro del mapa circular
   const distFromCenter = Math.hypot(
     player.x - MAP_RADIUS,
@@ -401,7 +344,10 @@ socket.on("init", (data) => {
 });
 
 socket.on("newPlayer", (newPlayer) => {
-  players[newPlayer.id] = newPlayer;
+  players[newPlayer.id] = {
+    ...newPlayer,
+    tail: newPlayer.tail || [], // asegúrate que incluya la cola
+  };
   drawPlayers();
 });
 
@@ -409,7 +355,8 @@ socket.on("playerMoved", (data) => {
   if (players[data.id]) {
     players[data.id].x = data.x;
     players[data.id].y = data.y;
-    players[data.id].angle = data.angle !== undefined ? data.angle : 0; // <--- guardar el ángulo
+    players[data.id].angle = data.angle;
+    players[data.id].tail = data.tail; // ✅ actualizar cola desde el servidor
     drawPlayers();
   }
 });
