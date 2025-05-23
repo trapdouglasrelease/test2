@@ -7,14 +7,17 @@ let players = {};
 let isChatOpen = false;
 let isRunning = false;
 
+const MAX_ROPE_LENGTH = 700; // Longitud máxima de la cuerda invisible
+const SEGMENT_SPACING = 35; // Distancia fija entre segmentos
+
 const headImage = new Image();
 headImage.src = "assets/worm-head.png";
 
 const mapTexture = new Image();
 mapTexture.src = "assets/map-texture.png";
 
-//const defaultBodyImage1 = new Image();
-//defaultBodyImage1.src = "assets/worm-body1.png";
+const bodyImage = new Image();
+bodyImage.src = "assets/worm-body.png";
 
 //const defaultBodyImage2 = new Image();
 //defaultBodyImage2.src = "assets/worm-body2.png";
@@ -178,10 +181,65 @@ function drawPlayers() {
     ctx.fill();
   });
 
+  const tailLength = 50; // la cantidad de segmentos que querés mostrar
+  const spacing = 35; // la distancia entre segmentos
+
+  Object.values(players).forEach((p) => {
+    if (!p.tail || p.tail.length !== tailLength) {
+      p.tail = Array(tailLength)
+        .fill(null)
+        .map(() => ({ x: p.x, y: p.y }));
+    }
+
+    p.tail[0] = { x: p.x, y: p.y };
+
+    for (let i = 1; i < tailLength; i++) {
+      const prev = p.tail[i - 1];
+      const curr = p.tail[i];
+      const dx = prev.x - curr.x;
+      const dy = prev.y - curr.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > spacing) {
+        const angle = Math.atan2(dy, dx);
+        curr.x = prev.x - Math.cos(angle) * spacing;
+        curr.y = prev.y - Math.sin(angle) * spacing;
+      }
+    }
+  });
+
   // Dibujar jugadores y mensajes
   Object.values(players).forEach((p) => {
     const screenX = p.x - cameraX;
     const screenY = p.y - cameraY;
+
+    // 🐍 Dibuja la cola del jugador con imagen
+    if (Array.isArray(p.tail)) {
+      for (let i = p.tail.length - 1; i >= 1; i--) {
+        const segment = p.tail[i];
+        const segX = segment.x - cameraX;
+        const segY = segment.y - cameraY;
+
+        if (bodyImage.complete && bodyImage.naturalWidth) {
+          const scale = 1;
+          const width = bodyImage.naturalWidth * scale;
+          const height = bodyImage.naturalHeight * scale;
+
+          ctx.save();
+          ctx.translate(segX, segY);
+
+          // Opcional: rotación suave del cuerpo en dirección a siguiente segmento
+          if (i > 0) {
+            const next = p.tail[i - 1];
+            const angle = Math.atan2(next.y - segment.y, next.x - segment.x);
+            ctx.rotate(angle);
+          }
+
+          ctx.drawImage(bodyImage, -width / 2, -height / 2, width, height);
+          ctx.restore();
+        }
+      }
+    }
 
     if (headImage.complete && headImage.naturalWidth) {
       const scale = 1;
@@ -262,18 +320,18 @@ function updatePlayerMovement() {
   const player = players[socket.id];
   if (!player) return;
 
+  // Dirección desde el centro del canvas al mouse
   const dx = mouseX - canvas.width / 2;
   const dy = mouseY - canvas.height / 2;
   const targetAngle = Math.atan2(dy, dx);
 
+  // Inicializar ángulo si no existe
   if (player.angle === undefined) player.angle = targetAngle;
 
-  const baseSpeed = 3;
-  const runSpeed = 6;
-  const speed = isRunning ? runSpeed : baseSpeed;
-
+  // Limitar la rotación (giro constante por frame)
   const baseTurnSpeed = 0.03;
-  const maxTurnSpeed = baseTurnSpeed * (speed / baseSpeed);
+  const runMultiplier = isRunning ? 2 : 1;
+  const maxTurnSpeed = baseTurnSpeed * runMultiplier;
 
   let angleDiff = targetAngle - player.angle;
   angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
@@ -284,22 +342,51 @@ function updatePlayerMovement() {
     player.angle += Math.sign(angleDiff) * maxTurnSpeed;
   }
 
+  // Mover el jugador hacia adelante
+  const baseSpeed = 3;
+  const runSpeed = baseSpeed * 2;
+  const speed = isRunning ? runSpeed : baseSpeed;
+
   player.x += Math.cos(player.angle) * speed;
   player.y += Math.sin(player.angle) * speed;
 
+  // Actualizar la cola
+  const spacing = 35; // distancia entre segmentos
+  const tail = player.tail;
+
+  if (Array.isArray(tail)) {
+    tail[0] = { x: player.x, y: player.y };
+
+    for (let i = 1; i < tail.length; i++) {
+      const prev = tail[i - 1];
+      const curr = tail[i];
+      const dx = prev.x - curr.x;
+      const dy = prev.y - curr.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > spacing) {
+        const angle = Math.atan2(dy, dx);
+        curr.x = prev.x - Math.cos(angle) * spacing;
+        curr.y = prev.y - Math.sin(angle) * spacing;
+      }
+    }
+  }
+
+  // Limitar dentro del mapa circular
   const distFromCenter = Math.hypot(
     player.x - MAP_RADIUS,
     player.y - MAP_RADIUS
   );
-  if (distFromCenter > MAP_RADIUS - 10) {
+  if (distFromCenter > MAP_RADIUS - 40) {
     const angleToCenter = Math.atan2(
       player.y - MAP_RADIUS,
       player.x - MAP_RADIUS
     );
-    player.x = MAP_RADIUS + Math.cos(angleToCenter) * (MAP_RADIUS - 10);
-    player.y = MAP_RADIUS + Math.sin(angleToCenter) * (MAP_RADIUS - 10);
+    player.x = MAP_RADIUS + Math.cos(angleToCenter) * (MAP_RADIUS - 40);
+    player.y = MAP_RADIUS + Math.sin(angleToCenter) * (MAP_RADIUS - 40);
   }
 
+  // Enviar posición al servidor
   socket.emit("playerMove", {
     x: player.x,
     y: player.y,

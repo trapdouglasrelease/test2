@@ -4,14 +4,20 @@ let count = 0;
 
 function addPlayer(id) {
   count++;
+  const tailLength = 50; // número de segmentos de cola
+  const tail = Array(tailLength)
+    .fill(null)
+    .map(() => ({ x: 0, y: 0 }));
+
   players[id] = {
     x: Math.random() * 400,
     y: Math.random() * 400,
-    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
     id,
     name: `Jugador${count}`,
     messages: [],
+    tail, // ✅ ahora sí se envía al cliente
   };
+
   return players[id];
 }
 
